@@ -1,0 +1,100 @@
+# ═══════════════════════════════════════════════════════════════════
+#  WAH4Hospital V2 — Docker Compose (Full Stack)
+#  Owner: UNICA-HIJA
+#
+#  Services:
+#    frontend    — Vite + React (served via Nginx)
+#    nestjs-api  — NestJS REST API (Backend Framework)
+#    redis       — Redis Cache (MEWS Alerts, Session Store)
+#    mongo       — MongoDB (Clinical Records, Lab Results)
+#
+#  Usage:
+#    docker-compose up --build       # Start all services
+#    docker-compose down             # Stop all services
+#    docker-compose logs -f          # Stream logs
+# ═══════════════════════════════════════════════════════════════════
+
+version: "3.9"
+
+services:
+
+  # ── Frontend: Vite + React served via Nginx ──────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wah4h-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - nestjs-api
+    environment:
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+      - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+    networks:
+      - wah4h-network
+    restart: unless-stopped
+
+  # ── Backend: NestJS REST API ──────────────────────────────────────
+  nestjs-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: wah4h-api
+    ports:
+      - "3001:3001"
+    depends_on:
+      - redis
+      - mongo
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - JWT_SECRET=${JWT_SECRET:-WAH4H_V2_CRYPTO_KEY_2026}
+      - SUPABASE_URL=${VITE_SUPABASE_URL}
+      - SUPABASE_KEY=${VITE_SUPABASE_ANON_KEY}
+      - REDIS_URL=redis://redis:6379
+      - MONGO_URI=mongodb://mongo:27017/wah4h_clinical
+    networks:
+      - wah4h-network
+    restart: unless-stopped
+
+  # ── Cache: Redis (MEWS Alerts, Session Tokens) ────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: wah4h-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-wah4h_redis_2026}
+    networks:
+      - wah4h-network
+    restart: unless-stopped
+
+  # ── Document DB: MongoDB (Clinical Records, Lab Results) ──────────
+  mongo:
+    image: mongo:7
+    container_name: wah4h-mongo
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER:-wah4hadmin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:-wah4h_mongo_2026}
+      - MONGO_INITDB_DATABASE=wah4h_clinical
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - wah4h-network
+    restart: unless-stopped
+
+# ── Persistent Volumes ────────────────────────────────────────────
+volumes:
+  redis-data:
+    driver: local
+  mongo-data:
+    driver: local
+
+# ── Internal Network ──────────────────────────────────────────────
+networks:
+  wah4h-network:
+    driver: bridge

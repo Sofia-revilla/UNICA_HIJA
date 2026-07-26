@@ -1,0 +1,132 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  DOCTOR
+  NURSE
+  ADMIN
+}
+
+enum PatientStatus {
+  CRITICAL
+  STABLE
+  RECOVERING
+  OBSERVATION
+}
+
+enum InventoryCategory {
+  MEDICATION
+  SUPPLY
+  EQUIPMENT
+}
+
+enum InventoryStatus {
+  GOOD
+  LOW
+  CRITICAL
+}
+
+// User account with JWT-based Auth and Role-Based Access Control (RBAC)
+model User {
+  id             String        @id @default(uuid())
+  email          String        @unique
+  passwordHash   String
+  name           String
+  role           Role          @default(NURSE)
+  department     String
+  licenseNumber  String?       @unique
+  status         String        @default("Duty Active")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  prescriptions  Prescription[]
+}
+
+// Patient model demonstrating robust relational fields + a hybrid JSONB clinical field
+model Patient {
+  id            String        @id
+  name          String
+  age           Int
+  gender        String
+  status        PatientStatus @default(OBSERVATION)
+  mewsScore     Int           @default(0)
+  department    String
+  roomNumber    String
+  admittedAt    DateTime      @default(now())
+  avatarUrl     String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // PostgreSQL hybrid JSONB column for custom unstructured/clinical parameters
+  // e.g. { vitals: { bp: "120/80", heartRate: 72 }, history: ["Hypertension"] }
+  clinicalData  Json?         
+
+  labTests      LabTest[]
+  prescriptions Prescription[]
+}
+
+// Medication and supply stock tracking
+model InventoryItem {
+  id          String            @id
+  name        String
+  category    InventoryCategory
+  stock       Int
+  minStock    Int
+  unit        String
+  status      InventoryStatus   @default(GOOD)
+  
+  // PostgreSQL hybrid JSONB column for supplier, batches, and specific temperature configs
+  configData  Json?             
+
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+// Lab diagnostic work queues
+model LabTest {
+  id          String        @id
+  patientId   String
+  patient     Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  testName    String
+  priority    String        @default("Routine") // Urgent, Routine
+  status      String        @default("Pending") // Pending, In-Progress, Completed
+  timeAgo     String?
+  resultData  Json?         // JSONB diagnostic results payload
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+// Ward capacity board configurations
+model Ward {
+  id          String        @id
+  name        String
+  type        String        // Male, Female, Specialized, Children
+  capacity    Int
+  occupied    Int
+  colorCode   String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+// Electronic Prescriptions written by Doctors (Protected by DOCTOR Role)
+model Prescription {
+  id            String      @id
+  patientId     String
+  patient       Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  physicianId   String
+  physician     User        @relation(fields: [physicianId], references: [id])
+  medication    String
+  dosage        String
+  frequency     String
+  duration      String
+  route         String
+  instructions  String?
+  status        String      @default("Pending") // Pending, Dispensed, Review
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}

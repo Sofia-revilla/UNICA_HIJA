@@ -1,0 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-wah-deep: #0f0a1e;
+  --color-wah-purple: #6d28d9;
+  --color-wah-neon: #a855f7;
+  --color-wah-lavender: #e9d5ff;
+  --color-wah-muted: #1e1b4b;
+  --color-wah-accent: #d8b4fe;
+  
+  --color-background: #0f0a1e;
+  --color-foreground: #ffffff;
+  --color-text-secondary: #cbd5e1;
+  --color-text-muted: #94a3b8;
+  --color-glass-bg: rgba(255, 255, 255, 0.05);
+  --color-glass-border: rgba(255, 255, 255, 0.1);
+  --color-sidebar-bg: #0f0a1e;
+  --color-card-bg: rgba(255, 255, 255, 0.05);
+
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
+}
+
+.light {
+  --color-background: #f8f7ff;
+  --color-foreground: #0f0a1e;
+  --color-text-secondary: #334155;
+  --color-text-muted: #475569;
+  --color-glass-bg: rgba(109, 40, 217, 0.03);
+  --color-glass-border: rgba(109, 40, 217, 0.1);
+  --color-sidebar-bg: #ffffff;
+  --color-card-bg: #ffffff;
+}
+
+@theme {
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground font-sans antialiased selection:bg-wah-purple/30 transition-colors duration-300;
+  }
+}
+
+.glass {
+  @apply bg-glass-bg backdrop-blur-xl border border-glass-border;
+}
+
+.neon-glow {
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+}
+
+.purple-shadow {
+  box-shadow: 0 10px 30px -10px rgba(109, 40, 217, 0.3);
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

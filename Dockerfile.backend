@@ -1,0 +1,35 @@
+# --- Stage 1: Build NestJS API ---
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+# Install dependencies with lock caching
+COPY backend/package.json backend/package-lock.json* ./
+RUN npm install
+
+# Build the TS NestJS source
+COPY backend/ ./
+RUN npx prisma generate || true
+RUN npm run build
+
+# --- Stage 2: Clean Production Service ---
+FROM node:20-alpine-slim AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+# Expose backend REST API port
+EXPOSE 3001
+
+# Copy package configurations and install production instances only
+COPY backend/package.json backend/package-lock.json* ./
+RUN npm install --only=production --ignore-scripts
+
+# Copy Compiled JS payload and Database Schemas
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/prisma ./prisma
+
+# Use dedicated non-root container user for cloud security
+USER node
+
+# Start NestJS Rest Services
+CMD ["node", "dist/main"]
